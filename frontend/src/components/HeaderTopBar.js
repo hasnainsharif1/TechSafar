@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 
 const HeaderTopBar = () => {
   return (
@@ -17,17 +19,31 @@ const HeaderTopBar = () => {
       }}
     >
       <Typography variant="body2" sx={{ fontSize: 'inherit' }}>
-        Welcome to worldwide Megamart!
+        Welcome to worldwide MegaMart!
       </Typography>
       <Stack direction="row" spacing={2} alignItems="center">
-        <Button color="inherit" size="small" sx={{ fontSize: 'inherit', textTransform: 'none' }}>
-          <LocationOnIcon sx={{ fontSize: 'inherit', mr: 0.5 }} />
+        <Button 
+          color="inherit" 
+          size="small" 
+          startIcon={<LocationOnIcon sx={{ fontSize: '0.875rem' }} />}
+          sx={{ fontSize: 'inherit', textTransform: 'none' }}
+        >
           Deliver to 423651
         </Button>
-        <Button color="inherit" size="small" sx={{ fontSize: 'inherit', textTransform: 'none' }}>
+        <Button 
+          color="inherit" 
+          size="small" 
+          startIcon={<LocalShippingIcon sx={{ fontSize: '0.875rem' }} />}
+          sx={{ fontSize: 'inherit', textTransform: 'none' }}
+        >
           Track your order
         </Button>
-        <Button color="inherit" size="small" sx={{ fontSize: 'inherit', textTransform: 'none' }}>
+        <Button 
+          color="inherit" 
+          size="small" 
+          startIcon={<LocalOfferIcon sx={{ fontSize: '0.875rem' }} />}
+          sx={{ fontSize: 'inherit', textTransform: 'none' }}
+        >
           All Offers
         </Button>
       </Stack>
@@ -35,4 +51,4 @@ const HeaderTopBar = () => {
   );
 };
 
-export default HeaderTopBar; 
+export default HeaderTopBar;

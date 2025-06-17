@@ -90,16 +90,131 @@ export const fetchCategories = createAsyncThunk(
   }
 );
 
+// Add these new thunks to the existing file
+
+export const fetchFeaturedProducts = createAsyncThunk(
+  'products/fetchFeaturedProducts',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/products/featured/`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  }
+);
+
+export const fetchDailyEssentials = createAsyncThunk(
+  'products/fetchDailyEssentials',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/products/daily-essentials/`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  }
+);
+
+export const fetchBrands = createAsyncThunk(
+  'products/fetchBrands',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/products/brands/`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  }
+);
+
+export const fetchFeaturedBrands = createAsyncThunk(
+  'products/fetchFeaturedBrands',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/products/brands/featured/`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
+  }
+);
+
+// Update the initialState to include new state variables
 const initialState = {
   products: [],
+  featuredProducts: [],
+  dailyEssentials: [],
   currentProduct: null,
   categories: [],
+  brands: [],
+  featuredBrands: [],
   loading: false,
   error: null,
   totalPages: 1,
   currentPage: 1,
 };
 
+// Add these extra reducers to the productSlice
+extraReducers: (builder) => {
+  // Existing reducers...
+  
+  // Featured Products
+  builder.addCase(fetchFeaturedProducts.pending, (state) => {
+    state.loading = true;
+    state.error = null;
+  });
+  builder.addCase(fetchFeaturedProducts.fulfilled, (state, action) => {
+    state.loading = false;
+    state.featuredProducts = action.payload;
+  });
+  builder.addCase(fetchFeaturedProducts.rejected, (state, action) => {
+    state.loading = false;
+    state.error = action.payload;
+  });
+  
+  // Daily Essentials
+  builder.addCase(fetchDailyEssentials.pending, (state) => {
+    state.loading = true;
+    state.error = null;
+  });
+  builder.addCase(fetchDailyEssentials.fulfilled, (state, action) => {
+    state.loading = false;
+    state.dailyEssentials = action.payload;
+  });
+  builder.addCase(fetchDailyEssentials.rejected, (state, action) => {
+    state.loading = false;
+    state.error = action.payload;
+  });
+  
+  // Brands
+  builder.addCase(fetchBrands.pending, (state) => {
+    state.loading = true;
+    state.error = null;
+  });
+  builder.addCase(fetchBrands.fulfilled, (state, action) => {
+    state.loading = false;
+    state.brands = action.payload;
+  });
+  builder.addCase(fetchBrands.rejected, (state, action) => {
+    state.loading = false;
+    state.error = action.payload;
+  });
+  
+  // Featured Brands
+  builder.addCase(fetchFeaturedBrands.pending, (state) => {
+    state.loading = true;
+    state.error = null;
+  });
+  builder.addCase(fetchFeaturedBrands.fulfilled, (state, action) => {
+    state.loading = false;
+    state.featuredBrands = action.payload;
+  });
+  builder.addCase(fetchFeaturedBrands.rejected, (state, action) => {
+    state.loading = false;
+    state.error = action.payload;
+  });
+}
 const productSlice = createSlice({
   name: 'products',
   initialState,
@@ -202,4 +317,4 @@ const productSlice = createSlice({
 });
 
 export const { clearCurrentProduct, clearError } = productSlice.actions;
-export default productSlice.reducer; 
+export default productSlice.reducer;

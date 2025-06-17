@@ -60,4 +60,29 @@ class ReviewListView(generics.ListAPIView):
 
     def get_queryset(self):
         product_id = self.kwargs.get('product_id')
-        return Review.objects.filter(product_id=product_id) 
+        return Review.objects.filter(product_id=product_id)
+
+
+# Add these imports and views
+from .models import Brand
+from .serializers import BrandSerializer
+
+class BrandListView(generics.ListAPIView):
+    queryset = Brand.objects.all()
+    serializer_class = BrandSerializer
+    permission_classes = [permissions.AllowAny]
+
+class FeaturedBrandListView(generics.ListAPIView):
+    queryset = Brand.objects.filter(is_featured=True)
+    serializer_class = BrandSerializer
+    permission_classes = [permissions.AllowAny]
+
+class FeaturedProductListView(generics.ListAPIView):
+    queryset = Product.objects.filter(is_featured=True)
+    serializer_class = ProductSerializer
+    permission_classes = [permissions.AllowAny]
+
+class DailyEssentialsListView(generics.ListAPIView):
+    queryset = Product.objects.filter(is_daily_essential=True)
+    serializer_class = ProductSerializer
+    permission_classes = [permissions.AllowAny]

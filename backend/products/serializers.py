@@ -1,9 +1,14 @@
 from rest_framework import serializers
-from .models import Category, Product, ProductImage, Review
+from .models import Category, Brand, Product, ProductImage, Review
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
+        fields = '__all__'
+
+class BrandSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
         fields = '__all__'
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -22,17 +27,22 @@ class ReviewSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     seller_name = serializers.CharField(source='seller.username', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    brand_name = serializers.CharField(source='brand.name', read_only=True)
+    brand_logo = serializers.ImageField(source='brand.logo', read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     reviews = ReviewSerializer(many=True, read_only=True)
     average_rating = serializers.SerializerMethodField()
+    discount_percentage = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Product
         fields = ('id', 'seller', 'seller_name', 'category', 'category_name', 
-                 'title', 'description', 'price', 'condition', 'brand', 'model',
-                 'specifications', 'location', 'is_negotiable', 'is_available',
+                 'brand', 'brand_name', 'brand_logo', 'title', 'description', 
+                 'price', 'original_price', 'discount_percentage', 'condition', 
+                 'model', 'specifications', 'location', 'is_negotiable', 
+                 'is_available', 'is_featured', 'is_daily_essential',
                  'views', 'images', 'reviews', 'average_rating', 'created_at', 'updated_at')
-        read_only_fields = ('seller', 'views')
+        read_only_fields = ('seller', 'views', 'discount_percentage')
 
     def get_average_rating(self, obj):
         reviews = obj.reviews.all()
@@ -49,9 +59,9 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('category', 'title', 'description', 'price', 'condition',
-                 'brand', 'model', 'specifications', 'location', 'is_negotiable',
-                 'images')
+        fields = ('category', 'brand', 'title', 'description', 'price', 'original_price',
+                 'condition', 'model', 'specifications', 'location', 'is_negotiable',
+                 'is_featured', 'is_daily_essential', 'images')
 
     def create(self, validated_data):
         images = validated_data.pop('images', [])
@@ -64,4 +74,4 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 is_primary=(i == 0)  # First image is primary
             )
         
-        return product 
+        return product

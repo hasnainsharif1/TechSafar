@@ -70,47 +70,79 @@ const MainNavbar = ({ showSnackbar }) => {
     navigate('/');
   };
 
+  // Update the Navbar component to match MegaMart design
+  // At the top of the file, keep imports and styled components
+  
+  // In the MainNavbar component, update the return statement:
   return (
-    <AppBar position="static" color="inherit" sx={{ bgcolor: 'white', color: '#333', boxShadow: 'none', borderBottom: '1px solid #eee' }}>
+    <AppBar position="static" sx={{ bgcolor: 'white', color: '#333', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
       <Toolbar>
         <Typography
           variant="h6"
-          noWrap
           component={Link}
           to="/"
           sx={{
-            display: { xs: 'none', sm: 'block' },
             fontWeight: 'bold',
-            color: '#000',
+            color: '#0091ea', // MegaMart blue
             textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            mr: 2,
           }}
         >
-          TechSafar
+          MegaMart
         </Typography>
+  
         <Search>
           <SearchIconWrapper>
-            <SearchIcon sx={{ color: '#777' }}/>
+            <SearchIcon />
           </SearchIconWrapper>
           <StyledInputBase
             placeholder="Search essentials, groceries and more..."
             inputProps={{ 'aria-label': 'search' }}
           />
         </Search>
+  
         <Box sx={{ flexGrow: 1 }} />
-        <Stack direction="row" spacing={3} alignItems="center">
-          <Button color="inherit" sx={{ textTransform: 'none' }} startIcon={<ListIcon />}>
-            Categories
-          </Button>
+  
+        <Stack direction="row" spacing={1}>
           {isAuthenticated ? (
-            <Button color="inherit" sx={{ textTransform: 'none' }} startIcon={<PersonIcon />} onClick={handleLogout}>
-              Logout
-            </Button>
+            <>
+              <Button
+                color="inherit"
+                component={Link}
+                to="/profile"
+                startIcon={<PersonIcon />}
+                sx={{ textTransform: 'none' }}
+              >
+                {user?.username || 'Account'}
+              </Button>
+              <Button
+                color="inherit"
+                onClick={handleLogout}
+                sx={{ textTransform: 'none' }}
+              >
+                Logout
+              </Button>
+            </>
           ) : (
-            <Button color="inherit" sx={{ textTransform: 'none' }} component={Link} to="/login" startIcon={<PersonIcon />}>
+            <Button
+              color="inherit"
+              component={Link}
+              to="/login"
+              startIcon={<PersonIcon />}
+              sx={{ textTransform: 'none' }}
+            >
               Sign Up/Sign In
             </Button>
           )}
-          <Button color="inherit" sx={{ textTransform: 'none' }} startIcon={<ShoppingCartIcon />}>
+          <Button
+            color="inherit"
+            component={Link}
+            to="/cart"
+            startIcon={<ShoppingCartIcon />}
+            sx={{ textTransform: 'none' }}
+          >
             Cart
           </Button>
         </Stack>
@@ -119,4 +151,4 @@ const MainNavbar = ({ showSnackbar }) => {
   );
 };
 
-export default MainNavbar; 
+export default MainNavbar;
