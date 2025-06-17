@@ -1,0 +1,414 @@
+Okay, let's break down everything that's going on in your project, file by file, starting with the Frontend and then moving to the Backend.
+
+---
+
+## Frontend Overview (React)
+
+The frontend is a single-page application (SPA) built with React, styled using Material-UI, and managing state with Redux Toolkit. It interacts with your Django backend via REST APIs.
+
+### `frontend/src/index.js`
+
+This is the main entry point of your React application.
+-   **Purpose:** Renders the root React component (`App`) into the `index.html` file's `div` with `id="root"`. It also sets up global contexts.
+-   **Key Changes/Role:**
+    *   **Redux Provider:** Crucially, it now wraps the entire `<App />` component within `<Provider store={store}>`. This makes your Redux store (where all your application's state lives) accessible to *any* component in your React application that needs it. This was the fix for the "could not find react-redux context value" error.
+    *   **Material-UI `CssBaseline`:** This component from `@mui/material` helps kickstart a consistent, elegant, and simple baseline to build upon. It normalizes CSS across browsers.
+    *   **`StrictMode`:** React's strict mode is activated for development to highlight potential problems in an application.
+
+### `frontend/src/App.js`
+
+This file defines the main application structure, routing, and global components like the Navbar and Snackbar.
+-   **Purpose:** Acts as the central hub for routing, global UI elements, and overall application flow.
+-   **Key Changes/Role:**
+    *   **React Router:** Sets up `BrowserRouter` (`Router`), `Routes`, and `Route` components to handle navigation within the SPA. Each `Route` maps a URL path to a specific page component.
+    *   **`Navbar` Component:** This is a separate functional component (defined within `App.js` for now) that renders the top navigation bar using Material-UI's `AppBar`, `Toolbar`, and `Button` components.
+        *   **Dynamic Links:** It uses Redux's `useSelector` to check `isAuthenticated` state. Based on this, it conditionally renders "Login" and "Register" buttons (if not logged in) or "Profile", "Sell Product", "Create Shop", and "Logout" buttons (if logged in).
+        *   **Logout Functionality:** It dispatches the `logout` thunk from `authSlice` and redirects to the home page.
+    *   **`PrivateRoute` Component:** A higher-order component that checks if a user is authenticated. If not, it redirects them to the `/login` page using `Navigate`. This secures routes like `/profile`, `/products/create`, and `/shops/create`.
+    *   **Global Snackbar:** Implements a Material-UI `Snackbar` at the application level.
+        *   It uses local state (`snackbar`) to control its visibility, message, and severity.
+        *   A `showSnackbar` function is passed down as a prop to components like `Login`, `Register`, and `Profile` (and will be used in CreateProduct/Shop) to easily display global notifications from anywhere in the app.
+    *   **Imported Pages:** Imports all your main page components (`Home`, `Login`, `Register`, `Products`, `ProductDetail`, `CreateProduct`, `Shops`, `ShopDetail`, `Profile`).
+    *   **Routes Defined:**
+        *   `/`: Home page
+        *   `/products`: List of products
+        *   `/products/:id`: Detail page for a specific product
+        *   `/products/create`: Form to create a new product (protected)
+        *   `/shops`: List of shops
+        *   `/shops/:id`: Detail page for a specific shop
+        *   `/shops/create`: Form to create a new shop (protected)
+        *   `/login`: Login form
+        *   `/register`: Registration form
+        *   `/profile`: User profile page (protected)
+
+### `frontend/src/store/index.js`
+
+This file configures and creates your Redux store.
+-   **Purpose:** Centralizes your application's state management.
+-   **Key Changes/Role:**
+    *   **`configureStore`:** From Redux Toolkit, this function simplifies store setup. It automatically combines reducers, adds `redux-thunk` middleware (for handling asynchronous actions), and sets up Redux DevTools Extension for easy debugging.
+    *   **Root Reducer:** Combines all your individual slice reducers (`authReducer`, `productReducer`, `shopReducer`, `chatReducer`) into a single root reducer. Each slice manages a specific part of your application's state.
+    *   **Middleware Configuration:** Disables the serializable check in middleware, which can be useful when dealing with non-serializable data in Redux actions (like `FormData` for file uploads).
+
+### `frontend/src/store/slices/authSlice.js`
+
+This Redux slice manages all authentication-related state and actions.
+-   **Purpose:** Handles user login, registration, profile retrieval, profile updates, and logout.
+-   **Key Changes/Role:**
+    *   **`createAsyncThunk`:** Defines asynchronous actions (thunks) for interacting with your backend API using `axios`.
+        *   `login`: Sends user credentials to `backend/users/token/`, stores `access_token` and `refresh_token` in `localStorage`.
+        *   `register`: Sends new user data to `backend/users/register/`.
+        *   `getProfile`: Fetches the current user's profile from `backend/users/profile/` using the stored `access_token`.
+        *   `updateProfile`: Sends updated profile data (via `PATCH` request) to `backend/users/profile/` using the stored `access_token`.
+        *   `logout`: Clears `access_token` and `refresh_token` from `localStorage`. (Optionally, could also hit a backend logout endpoint if available).
+    *   **`createSlice`:** Defines the reducer logic and initial state for the auth slice.
+    *   **`initialState`:** Manages `user` data, `token`, `isAuthenticated` status (derived from `localStorage`), `loading` status, and `error` messages.
+    *   **`extraReducers`:** Handles the `pending`, `fulfilled`, and `rejected` states for each `createAsyncThunk` action, updating the `loading`, `error`, `user`, `token`, and `isAuthenticated` states accordingly. It also clears tokens on logout.
+
+### `frontend/src/store/slices/productSlice.js`
+
+This Redux slice manages product-related state and actions.
+-   **Purpose:** Handles fetching, creating, updating, and deleting product data, including categories.
+-   **Key Changes/Role:**
+    *   **`createAsyncThunk`:**
+        *   `fetchProducts`: Fetches a list of products from `backend/products/`.
+        *   `fetchProductById`: Fetches a single product's details from `backend/products/:id/`.
+        *   `createProduct`: Sends new product data (including images via `FormData`) to `backend/products/`. Requires authentication.
+        *   `updateProduct`: Updates an existing product (via `PATCH`) to `backend/products/:id/`. Requires authentication.
+        *   `deleteProduct`: Deletes a product from `backend/products/:id/`. Requires authentication.
+        *   `fetchCategories` (NEW): Fetches product categories from `backend/products/categories/`.
+    *   **`initialState`:** Manages `products` list, `currentProduct` (for details), `categories` (new), `loading`, `error`, `totalPages`, and `currentPage` for pagination.
+    *   **`extraReducers`:** Manages state changes for all product-related thunks, updating corresponding state properties.
+
+### `frontend/src/store/slices/shopSlice.js`
+
+This Redux slice manages shop-related state and actions.
+-   **Purpose:** Handles fetching, creating, updating, and deleting shop data.
+-   **Key Changes/Role:**
+    *   **`createAsyncThunk`:**
+        *   `fetchShops`: Fetches a list of shops from `backend/shops/`.
+        *   `fetchShopById`: Fetches a single shop's details from `backend/shops/:id/`.
+        *   `createShop`: Sends new shop data (including logo/cover via `FormData`) to `backend/shops/`. Requires authentication.
+        *   `updateShop`: Updates an existing shop (via `PATCH`) to `backend/shops/:id/`. Requires authentication.
+        *   `deleteShop`: Deletes a shop from `backend/shops/:id/`. Requires authentication.
+    *   **`initialState`:** Manages `shops` list, `currentShop` (for details), `loading`, `error`, `totalPages`, and `currentPage`.
+    *   **`extraReducers`:** Manages state changes for all shop-related thunks.
+
+### `frontend/src/store/slices/chatSlice.js`
+
+This Redux slice manages chat-related state and actions. (Note: UI integration not yet done)
+-   **Purpose:** Manages chat rooms and messages.
+-   **Key Changes/Role:**
+    *   **`createAsyncThunk`:**
+        *   `fetchChatRooms`: Fetches chat rooms for the authenticated user.
+        *   `fetchChatRoomById`: Fetches a specific chat room's details.
+        *   `createChatRoom`: Creates a new chat room with a participant.
+        *   `fetchMessages`: Fetches messages for a given chat room.
+        *   `sendMessage`: Sends a new message.
+    *   **`initialState`:** Manages `chatRooms`, `currentChatRoom`, `messages`, `loading`, and `error`.
+    *   **`reducers`:** Includes `addMessage` (for potential real-time updates) and `clearCurrentChatRoom`, `clearError`.
+    *   **`extraReducers`:** Handles state changes for chat thunks.
+
+### `frontend/src/pages/Home.js`
+
+This is your new, eye-catching landing page.
+-   **Purpose:** Provide a welcoming introduction and guide users to key areas.
+-   **Key Changes/Role:**
+    *   **Material-UI Layout:** Uses `Box` and `Container` for responsive layout.
+    *   **Styling:** Features a gradient background (`backgroundImage`), centered text, and large, prominent typography (`Typography`).
+    *   **Call to Action:** Includes `Button` components that link to `/products` (Explore Products) and `/register` (Join Us Today), encouraging user interaction.
+
+### `frontend/src/pages/Login.js`
+
+This page provides the user login form.
+-   **Purpose:** Allows existing users to authenticate with the backend.
+-   **Key Changes/Role:**
+    *   **Material-UI Form:** Uses `TextField` for username and password, `Button` for submission, and `Paper` for a styled container.
+    *   **Redux Integration:** Dispatches the `login` thunk from `authSlice`.
+    *   **Navigation:** Uses `useNavigate` to redirect to `/profile` on successful login.
+    *   **Loading/Error State:** Shows a `CircularProgress` on button while loading and displays `Alert` for errors.
+    *   **Snackbar Feedback:** Now utilizes the `showSnackbar` prop (passed from `App.js`) to display global success/failure messages after login attempts.
+
+### `frontend/src/pages/Register.js`
+
+This page provides the user registration form.
+-   **Purpose:** Allows new users to create an account.
+-   **Key Changes/Role:**
+    *   **Material-UI Form:** Similar to Login, uses `TextField` for username, email, password, and confirm password.
+    *   **Redux Integration:** Dispatches the `register` thunk from `authSlice`.
+    *   **Navigation:** Redirects to `/login` after successful registration.
+    *   **Loading/Error State:** Shows loading spinner and error alerts.
+    *   **Snackbar Feedback:** Uses `showSnackbar` to display global messages after registration attempts.
+
+### `frontend/src/pages/Products.js`
+
+Displays a list of products.
+-   **Purpose:** Shows available products from the backend in an appealing grid format.
+-   **Key Changes/Role:**
+    *   **Data Fetching:** Uses `useEffect` and `dispatch(fetchProducts())` to load products on component mount.
+    *   **Material-UI Grid/Cards:** Organizes products using `Grid` and `Card` components, each displaying product image, title, description, and price.
+    *   **Clickable Cards (NEW):** Each `Card` is wrapped in `CardActionArea` with an `onClick` handler that uses `useNavigate` to go to the `ProductDetail` page for that specific product (`/products/:id`).
+    *   **Loading/Error State:** Displays `CircularProgress` while loading and `Alert` if there's an error or no products found.
+
+### `frontend/src/pages/ProductDetail.js`
+
+Displays detailed information for a single product.
+-   **Purpose:** Provides a dedicated view for a selected product, including all available information and images.
+-   **Key Changes/Role:**
+    *   **Dynamic ID:** Uses `useParams()` to get the product `id` from the URL.
+    *   **Data Fetching:** Dispatches `fetchProductById(id)` to load product details.
+    *   **Material-UI Layout:** Uses `Grid`, `Card`, `CardMedia`, and `Typography` to present product details and images.
+    *   **Placeholder Image:** Displays a `/placeholder.png` if no product images are available.
+    *   **Loading/Error State:** Displays `CircularProgress` and `Alert` for loading and error conditions.
+
+### `frontend/src/pages/CreateProduct.js`
+
+Provides a form for sellers to create new product listings.
+-   **Purpose:** Allows authenticated users to add new products to the marketplace.
+-   **Key Changes/Role:**
+    *   **Material-UI Form:** Uses `TextField`, `Select` (for Category and Condition), `Button` for submission and file upload, and `Paper` for styling.
+    *   **Image Upload:** Handles multiple image file selection via `input type="file"`. Uses `FormData` to send the form data and files to the backend.
+    *   **Category Dropdown:** Includes a `Select` component for categories. It has placeholder `MenuItem`s currently, but is ready to integrate `fetchCategories` data once you fetch actual categories from the backend.
+    *   **Redux Integration:** Dispatches the `createProduct` thunk.
+    *   **Navigation:** Redirects to `/products` on successful creation.
+    *   **Loading/Error State:** Shows loading spinner and error alerts.
+    *   **Snackbar Feedback:** Uses `showSnackbar` to display feedback on product creation success or failure.
+
+### `frontend/src/pages/Shops.js`
+
+Displays a list of shops.
+-   **Purpose:** Shows available shops from the backend in an appealing grid format.
+-   **Key Changes/Role:**
+    *   **Data Fetching:** Uses `useEffect` and `dispatch(fetchShops())` to load shops on component mount.
+    *   **Material-UI Grid/Cards:** Organizes shops using `Grid` and `Card` components, each displaying shop logo, name, description, and owner.
+    *   **Clickable Cards (NEW):** Each `Card` is wrapped in `CardActionArea` with an `onClick` handler that uses `useNavigate` to go to the `ShopDetail` page for that specific shop (`/shops/:id`).
+    *   **Loading/Error State:** Displays `CircularProgress` while loading and `Alert` if there's an error or no shops found.
+
+### `frontend/src/pages/ShopDetail.js`
+
+Displays detailed information for a single shop.
+-   **Purpose:** Provides a dedicated view for a selected shop, including all available information and images.
+-   **Key Changes/Role:**
+    *   **Dynamic ID:** Uses `useParams()` to get the shop `id` from the URL.
+    *   **Data Fetching:** Dispatches `fetchShopById(id)` to load shop details.
+    *   **Material-UI Layout:** Uses `Grid`, `Card`, `CardMedia`, and `Typography` to present shop details and images.
+    *   **Placeholder Image:** Displays a `/placeholder.png` if no shop logo is available.
+    *   **Loading/Error State:** Displays `CircularProgress` and `Alert` for loading and error conditions.
+
+### `frontend/src/pages/CreateShop.js`
+
+Provides a form for users to create new shop listings.
+-   **Purpose:** Allows authenticated users to add new shops to the marketplace.
+-   **Key Changes/Role:**
+    *   **Material-UI Form:** Uses `TextField` for shop details, `Button` for submission and file upload, and `Paper` for styling.
+    *   **Image Upload:** Handles single image file selection for logo and cover image via `input type="file"`. Uses `FormData` to send the form data and files to the backend.
+    *   **Redux Integration:** Dispatches the `createShop` thunk.
+    *   **Navigation:** Redirects to `/shops` on successful creation.
+    *   **Loading/Error State:** Shows loading spinner and error alerts.
+    *   **Snackbar Feedback:** Uses `showSnackbar` to display feedback on shop creation success or failure.
+
+---
+
+## Backend Overview (Django)
+
+The backend is a REST API built with Django and Django REST Framework (DRF), serving data to the React frontend.
+
+### `backend/techsafar/settings.py`
+
+This is the main configuration file for your Django project.
+-   **Purpose:** Defines project-wide settings such as installed apps, middleware, database configuration, static files, and REST framework settings.
+-   **Key Changes/Role:**
+    *   **Database Configuration:** Switched from `djongo` (MongoDB) to `django.db.backends.sqlite3` for `default` database. This makes it easier to get started locally without a MongoDB instance. (`'NAME': BASE_DIR / 'db.sqlite3'`).
+    *   **Installed Apps:** Includes all necessary Django apps, third-party libraries (like `rest_framework`, `corsheaders`, `channels`, `django_filters`, `rest_framework_simplejwt`, `django_cleanup.apps.CleanupConfig`), and your custom apps (`users`, `products`, `shops`, `chat`).
+    *   **`CORS_ALLOWED_ORIGINS`:** Configured to allow requests from your React frontend (`http://localhost:3000`, `http://127.0.0.1:3000`) for cross-origin resource sharing.
+    *   **`REST_FRAMEWORK`:** Configures DRF defaults, including `JWTAuthentication` as the default authentication class, `IsAuthenticated` as the default permission, `DjangoFilterBackend` for filtering, and `PageNumberPagination`.
+    *   **`SIMPLE_JWT`:** Configures JWT token lifetimes.
+    *   **`ASGI_APPLICATION`:** Points to the Channels application for WebSocket support.
+    *   **`MEDIA_URL` / `MEDIA_ROOT`:** Configured to serve user-uploaded media files.
+    *   **`AUTH_USER_MODEL`:** Specifies `users.User` as the custom user model.
+    *   **`STATIC_URL` / `STATIC_ROOT`:** Configured for static file handling.
+
+### `backend/techsafar/urls.py`
+
+This is the root URL configuration for your Django project.
+-   **Purpose:** Maps URLs to your Django applications' URL configurations.
+-   **Key Changes/Role:**
+    *   Includes `admin.site.urls` for the Django admin panel.
+    *   Includes URL patterns for your custom apps (`users`, `products`, `shops`, `chat`) using `path('api/users/', include('users.urls'))`, etc. This means requests to `/api/users/` will be handled by `users/urls.py`, and so on.
+    *   Configures `static` and `media` URL patterns for development to serve uploaded files and static assets.
+    *   Includes JWT token endpoints (`token/`, `token/refresh/`).
+
+### `backend/techsafar/asgi.py`
+
+This file is for Asynchronous Server Gateway Interface (ASGI) applications, primarily used by Django Channels.
+-   **Purpose:** Serves as the entry point for WebSocket connections.
+-   **Key Changes/Role:**
+    *   Sets up `ProtocolTypeRouter` to differentiate between HTTP requests (handled by Django's WSGI application) and WebSocket connections (routed to `channels`).
+    *   Uses `AuthMiddlewareStack` to authenticate WebSocket connections based on Django's authentication system.
+    *   Includes `chat.routing.websocket_urlpatterns` to route WebSocket connections to your chat consumers.
+
+### `backend/users/models.py`
+
+Defines the custom User model for your application.
+-   **Purpose:** Customizes the default Django User model to include additional fields like `profile_picture`.
+-   **Key Changes/Role:**
+    *   Inherits from `AbstractUser` to extend Django's built-in user functionality.
+    *   Adds fields like `profile_picture` (using `ImageField` which requires `Pillow`).
+
+### `backend/users/serializers.py`
+
+Handles the serialization and deserialization of User model data.
+-   **Purpose:** Converts complex Django model instances into Python datatypes that can be easily rendered into JSON, and vice-versa for incoming data.
+-   **Key Changes/Role:**
+    *   `UserSerializer`: Basic serializer for user fields used in other serializers (e.g., `ChatRoomSerializer`).
+    *   `UserRegistrationSerializer`: Handles creating new user accounts, including password validation and hashing.
+    *   `UserProfileSerializer`: Used for retrieving and updating user profile information.
+
+### `backend/users/views.py`
+
+Defines the API views for user management.
+-   **Purpose:** Provides endpoints for user registration and profile management.
+-   **Key Changes/Role:**
+    *   `UserRegistrationView`: Allows users to register.
+    *   `UserProfileView`: Allows authenticated users to view and update their profile.
+
+### `backend/users/urls.py`
+
+Defines URL patterns for the `users` app.
+-   **Purpose:** Maps URLs to the views defined in `users/views.py`.
+-   **Key Changes/Role:**
+    *   Includes `register/`, `profile/` endpoints.
+    *   Includes JWT token generation (`token/`) and refresh (`token/refresh/`) endpoints.
+
+### `backend/products/models.py`
+
+Defines the Product and related models.
+-   **Purpose:** Structures the data for products, categories, and reviews.
+-   **Key Changes/Role:**
+    *   `Category`: For product categorization.
+    *   `Product`: Main product model with fields like title, description, price, condition, location, seller (foreign key to `User`), and category.
+    *   `ProductImage`: Stores images associated with a product.
+    *   `Review`: For product reviews.
+
+### `backend/products/serializers.py`
+
+Handles serialization for Product models.
+-   **Purpose:** Converts `Product`, `Category`, `ProductImage`, and `Review` model instances to/from JSON.
+-   **Key Changes/Role:**
+    *   Nested serializers for `ProductImage` and `Category`.
+    *   Handles `ImageField`s for product images.
+
+### `backend/products/views.py`
+
+Defines API views for product management.
+-   **Purpose:** Provides endpoints for listing, retrieving, creating, updating, and deleting products and categories.
+-   **Key Changes/Role:**
+    *   `ProductListView`, `ProductDetailView`, `ProductCreateView`, `ProductUpdateView`, `ProductDeleteView`.
+    *   `CategoryListView`.
+    *   Uses `DjangoFilterBackend` for filtering.
+    *   Uses `IsSellerOrReadOnly` custom permission.
+
+### `backend/products/urls.py`
+
+Defines URL patterns for the `products` app.
+-   **Purpose:** Maps URLs to the views in `products/views.py`.
+-   **Key Changes/Role:**
+    *   Includes routes for product lists, details, creation, updates, deletions, and categories.
+
+### `backend/shops/models.py`
+
+Defines the Shop and related models.
+-   **Purpose:** Structures the data for shops and shop reviews.
+-   **Key Changes/Role:**
+    *   `Shop`: Main shop model with fields like name, description, address, logo, cover image, and owner (foreign key to `User`).
+    *   `ShopImage`: (If you planned multiple images for shops, similar to products. Currently, just logo and cover are handled directly on `Shop`).
+    *   `ShopReview`: For reviews of shops.
+
+### `backend/shops/serializers.py`
+
+Handles serialization for Shop models.
+-   **Purpose:** Converts `Shop` and `ShopReview` model instances to/from JSON.
+-   **Key Changes/Role:**
+    *   Handles `ImageField`s for shop logo and cover image.
+
+### `backend/shops/views.py`
+
+Defines API views for shop management.
+-   **Purpose:** Provides endpoints for listing, retrieving, creating, updating, and deleting shops and shop reviews.
+-   **Key Changes/Role:**
+    *   `ShopListView`, `ShopDetailView`, `ShopCreateView`, `ShopUpdateView`, `ShopDeleteView`.
+    *   Uses `IsShopOwnerOrReadOnly` custom permission.
+
+### `backend/shops/urls.py`
+
+Defines URL patterns for the `shops` app.
+-   **Purpose:** Maps URLs to the views in `shops/views.py`.
+-   **Key Changes/Role:**
+    *   Includes routes for shop lists, details, creation, updates, and deletions.
+
+### `backend/chat/models.py`
+
+Defines the ChatRoom and Message models.
+-   **Purpose:** Structures the data for chat functionality.
+-   **Key Changes/Role:**
+    *   `ChatRoom`: Represents a chat conversation between multiple participants (users).
+    *   `Message`: Represents an individual message within a `ChatRoom`, linked to a sender and content.
+
+### `backend/chat/serializers.py`
+
+Handles serialization for Chat models.
+-   **Purpose:** Converts `ChatRoom` and `Message` model instances to/from JSON for API communication.
+-   **Key Changes/Role:**
+    *   `MessageSerializer`: Serializes message data, including the sender (using `UserSerializer`).
+    *   `ChatRoomSerializer`: Serializes chat room data, including participants and a method to get the `last_message`.
+
+### `backend/chat/views.py`
+
+Defines API views for chat management.
+-   **Purpose:** Provides endpoints for listing chat rooms, retrieving chat room details, listing messages, and creating new messages.
+-   **Key Changes/Role:**
+    *   `ChatRoomListView`: Lists and creates chat rooms, filtering by current user's participation.
+    *   `ChatRoomDetailView`: Retrieves details of a specific chat room.
+    *   `MessageListView`: Lists messages within a specific chat room, ensuring only participants can view.
+    *   `MessageCreateView`: Creates new messages within a chat room.
+
+### `backend/chat/urls.py`
+
+Defines URL patterns for the `chat` app.
+-   **Purpose:** Maps URLs to the views in `chat/views.py`.
+-   **Key Changes/Role:**
+    *   Includes routes for chat room lists, details, and message lists/creation within rooms.
+
+### `backend/chat/consumers.py` (Not yet integrated into UI)
+
+This file will contain the WebSocket consumers for real-time chat.
+-   **Purpose:** Handles WebSocket connections for live chat communication, enabling messages to be sent and received instantly without needing to refresh.
+-   **Key Changes/Role:**
+    *   Will define a consumer class (e.g., `ChatConsumer`) that handles connection, disconnection, and message reception, and sends messages to specific chat room channels.
+    *   Will interact with Django models to save messages.
+
+### `backend/chat/routing.py` (Not yet integrated into UI)
+
+This file defines how WebSocket URLs are routed to consumers.
+-   **Purpose:** Maps WebSocket paths to specific consumer classes.
+-   **Key Changes/Role:**
+    *   Defines `websocket_urlpatterns` to route `/ws/chat/<room_name>/` (or similar) to your `ChatConsumer`.
+
+### `.gitignore` (at `TechSafar` root)
+
+-   **Purpose:** Specifies intentionally untracked files that Git should ignore.
+-   **Key Changes/Role:**
+    *   Includes common exclusions for Python, Django, Node.js, virtual environments (`venv`, `env`), IDE configs (`.idea`, `.vscode`), environment variables (`.env`), build directories, and SQLite database file (`db.sqlite3`). This keeps your repository clean and prevents sensitive or temporary files from being committed.
+
+### `pyrightconfig.json` (at `TechSafar` root)
+
+-   **Purpose:** Configuration file for the Pyright static type checker (often used by VS Code's Python extension).
+-   **Key Changes/Role:**
+    *   `"include": ["backend"]`: Tells Pyright to analyze files within the `backend` directory.
+    *   `"exclude"`, `"ignore"`: Excludes specific directories (like `node_modules`, `__pycache__`, `venv`) from analysis.
+    *   `"reportMissingImports": false`, `"reportMissingTypeStubs": false`: These settings are important! They suppress common linter false positives that occur in Django projects where the linter might not fully understand dynamic imports or ORM attributes like `.objects`. This ensures your editor doesn't show misleading errors while your code is actually correct.
+    *   `"pythonVersion"`, `"typeCheckingMode"`: Configures the Python version and how strictly Pyright checks types.
+
+---
+
+This covers the current state and purpose of each significant file in your project. Let me know if you want to dive deeper into any specific file or concept!
